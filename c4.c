@@ -34,7 +34,7 @@ enum {
   Assign, Cond, Lor, Lan, Or, Xor, And, Eq, Ne, Lt, Gt, Le, Ge, Shl, Shr, Add, Sub, Mul, Div, Mod, Inc, Dec, Brak
 };
 
-// opcodes
+// opcodes, enum has its order
 enum { LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,
        OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,
        OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,EXIT };
@@ -63,10 +63,11 @@ void next()
         }
       }
       ++line;
-    }
+    }// line processing
+    else if (tk == ' ' || tk == '\t' || tk == '\r'); // skip whitespace
     else if (tk == '#') {
       while (*p != 0 && *p != '\n') ++p;
-    }
+    }// skip comments
     else if ((tk >= 'a' && tk <= 'z') || (tk >= 'A' && tk <= 'Z') || tk == '_') {
       pp = p - 1;
       while ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_')
@@ -81,7 +82,7 @@ void next()
       id[Hash] = tk;
       tk = id[Tk] = Id;
       return;
-    }
+    }// 读取到第一个字符后，立即前进一个指针，然后保留一个指针指向上一步，通过哈希值匹配返回标记类型
     else if (tk >= '0' && tk <= '9') {
       if (ival = tk - '0') { while (*p >= '0' && *p <= '9') ival = ival * 10 + *p++ - '0'; }
       else if (*p == 'x' || *p == 'X') {
@@ -131,7 +132,7 @@ void next()
   }
 }
 
-void expr(int lev)
+void expr(int lev)//运算符优先级，优先级爬升法, lev允许处理的最低操作符优先级
 {
   int t, *d;
 
@@ -353,6 +354,7 @@ int main(int argc, char **argv)
   memset(e,    0, poolsz);
   memset(data, 0, poolsz);
 
+  // 关键字和库函数入符号表， id 指向当前标识符
   p = "char else enum if int return sizeof while "
       "open read close printf malloc free memset memcmp exit void main";
   i = Char; while (i <= While) { next(); id[Tk] = i++; } // add keywords to symbol table
@@ -360,6 +362,7 @@ int main(int argc, char **argv)
   next(); id[Tk] = Char; // handle void type
   next(); idmain = id; // keep track of main
 
+  // 读取和加载源代码到内存
   if (!(lp = p = malloc(poolsz))) { printf("could not malloc(%d) source area\n", poolsz); return -1; }
   if ((i = read(fd, p, poolsz-1)) <= 0) { printf("read() returned %d\n", i); return -1; }
   p[i] = 0;
@@ -463,7 +466,7 @@ int main(int argc, char **argv)
   if (!(pc = (int *)idmain[Val])) { printf("main() not defined\n"); return -1; }
   if (src) return 0;
 
-  // setup stack
+  // setup stack ， 虚拟机
   bp = sp = (int *)((int)sp + poolsz);
   *--sp = EXIT; // call exit if main returns
   *--sp = PSH; t = sp;
